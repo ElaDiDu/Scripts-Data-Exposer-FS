@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 #include "ProcessData.h"
+#include "Logger.h"
 
-void exposerLog(std::string);
 intptr_t getProcessBase();
 
 enum EnvId 
@@ -215,9 +215,9 @@ static void newActFunc(void** chrInsPtr, int actId, HksState* hksState)
         {
             AllocConsole();
             freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-            exposerLog("Created Scripts-Data-Exposer-FS Console");
+            Logger::log("Created Scripts-Data-Exposer-FS Console");
         }
-        exposerLog("[HKS Exposer Debug]: " + hksParamToString(hksState, 2));
+        Logger::log("[HKS Exposer Debug]: " + hksParamToString(hksState, 2));
         break;
     }
 

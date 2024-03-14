@@ -1,8 +1,10 @@
 #pragma once
 #include <string>
 
-
-static inline void exposerLog(std::string str)
+namespace Logger 
 {
-    std::printf(str.append("\n").c_str());
+    static inline void log(std::string str)
+    {
+        std::printf(str.append("\n").c_str());
+    }
 }

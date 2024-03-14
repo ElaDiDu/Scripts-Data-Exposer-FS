@@ -28,7 +28,7 @@ inline void* AOBScanAddress(const unsigned char* AOBString, const char* AOBMask,
             str << std::hex << static_cast<int>(AOBString[i]) << " ";
         }
         str << "not found.";
-        exposerLog(str.str());
+        Logger::log(str.str());
     }
 
     return reinterpret_cast<void*>(result);

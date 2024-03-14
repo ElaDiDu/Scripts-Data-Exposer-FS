@@ -108,7 +108,7 @@ bool createHook(LPVOID pTarget, LPVOID pDetour, LPVOID* ppOriginal)
     int mhStatus = MH_CreateHook(pTarget, pDetour, ppOriginal);
     if (mhStatus != MH_OK)
     {
-        exposerLog("MinHook CreateHook error creating hook " + std::to_string(mhStatus));
+        Logger::log("MinHook CreateHook error creating hook " + std::to_string(mhStatus));
         return false;
     }
     return true;
@@ -128,21 +128,21 @@ void onAttach()
     {
         AllocConsole();
         freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-        exposerLog("Created Scripts-Data-Exposer-FS Console");
+        Logger::log("Created Scripts-Data-Exposer-FS Console");
 
     }
     /*if (GetConsoleWindow() == NULL)
     {
         AllocConsole();
         freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-        exposerLog("Created Scripts-Data-Exposer-FS Console");
+        Logger::log("Created Scripts-Data-Exposer-FS Console");
     }*/
-    exposerLog("Start onAttach");
+    Logger::log("Start onAttach");
 
     int mhStatus = MH_Initialize();
     if (mhStatus != MH_OK) 
     {
-        exposerLog("MinHok Initialize error " + mhStatus);
+        Logger::log("MinHok Initialize error " + mhStatus);
         return;
     }
 
@@ -152,7 +152,7 @@ void onAttach()
     initHooks();
 
 
-    exposerLog("Finished onAttach");
+    Logger::log("Finished onAttach");
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,
