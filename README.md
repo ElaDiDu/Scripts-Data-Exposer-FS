@@ -7,4 +7,4 @@ This mod introduces new acts/envs to HKS which other mods can of course access, 
 Examplse and how to use are shown in the NewHksInfo.lua file.
 
 ## Thanks
-([Dasaav](https://github.com/Dasaav-dsv) for help on hooking and how to implement AOBs
+[Dasaav](https://github.com/Dasaav-dsv) for help on hooking and how to implement AOBs
