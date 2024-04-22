@@ -405,6 +405,7 @@ function SetParamValue(param, row, offset, type, value)
         if currId == row then
             local rowOffset = env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROW_OFFSET + ROW_SIZE * i)
             act(WritePointerChain, GAME_BASE, type, value, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, rowOffset + offset)
+            return
         end
     end
 end
