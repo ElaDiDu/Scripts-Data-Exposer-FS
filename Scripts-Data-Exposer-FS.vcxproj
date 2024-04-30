@@ -177,9 +177,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AOBScan.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="HksState.h" />
+    <ClInclude Include="game\AOBScan.h" />
+    <ClInclude Include="game\Emevd.h" />
+    <ClInclude Include="game\HksState.h" />
+    <ClInclude Include="game\ProcessData.h" />
+    <ClInclude Include="game\ProcessStructs.h" />
+    <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\mem\aligned_alloc.h" />
     <ClInclude Include="include\mem\arch.h" />
     <ClInclude Include="include\mem\bitwise_enum.h" />
@@ -205,9 +209,7 @@
     <ClInclude Include="include\mem\stub.h" />
     <ClInclude Include="include\mem\utils.h" />
     <ClInclude Include="include\MinHook.h" />
-    <ClInclude Include="Logger.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="ProcessData.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="include\mem\cpp.hint" />

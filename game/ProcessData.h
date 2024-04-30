@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <Psapi.h>
+#include "ProcessStructs.h"
 
 struct ProcessInfo 
 {
@@ -12,9 +13,6 @@ struct ProcessInfo
 };
 
 static ProcessInfo PROCESS_INFO;
-
-typedef void HksState;
-
 
 
 static void initBase()
@@ -33,8 +31,33 @@ intptr_t getProcessBase()
 }
 
 
-//hks functions
+//bases
+void** VirtualMemoryFlag;
+void** SoloParamRepository;
+void** WorldChrMan;
 
+//functions
+
+//misc
+bool (*getEventFlag)(void* virtualMemoryFlag, unsigned int flagId);
+
+void (*setEventFlag)(void* virtualMemoryFlag, unsigned int flagId, int val);
+
+void* (*getParamResCap)(void* soloParamRepository, int paramIndex, int unk);
+
+inline void* getParamData(int paramIndex) 
+{
+    intptr_t param = (intptr_t)getParamResCap(*SoloParamRepository, paramIndex, 0);
+    if (param == NULL) return NULL;
+    return (void*)(*(intptr_t*)((*(intptr_t*)(param + 0x80)) + 0x80));
+}
+
+void* (*getChrInsFromHandle)(void* worldChrMan, uint64_t* handlePtr);
+
+char (*replaceItem)(int itemToReplace, int newItem, char unk3);
+
+
+//HKS
 //+ 0x040de30
 /*
 * Original hks "env" function.
@@ -86,9 +109,13 @@ bool hksHasParamInt(HksState* hksState, int paramIndex)
 }
 
 
-//TODO not hks specific funcs, move somewhere else
-void** VirtualMemoryFlag;
 
-bool (*getEventFlag)(void* virtualMemoryFlag, unsigned int flagId);
+//EMEVD
+bool (*emevdSystemCondition)(void* unk1, void* unk2, CSEmkEventIns* event);
 
-void (*setEventFlag)(void* virtualMemoryFlag, unsigned int flagId, int val);
+bool (*emevdSystemControlFlow)(void* unk1, void* unk2, CSEmkEventIns* event);
+
+bool (*emevdSystemFunction)(void* unk1, void* unk2, CSEmkEventIns* event);
+
+
+//ESD

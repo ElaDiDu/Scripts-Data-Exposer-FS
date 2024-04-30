@@ -2,10 +2,21 @@
 --Custom Envs from Scripts-Data-Exposer
 ------------------------------------------
 --Returns the int at the specified location
+--4th param is bitOffset if value type is BIT, otherwise it's the first pointer offset.
 --WARNING: OFFSETS THAT LEAD TO AN INVALID (BUT NOT NULL/0) POINTER WILL CRASH
-TraversePointerChain = 10000 --args <starting base>, <offset1>, <offset2>, ...
+--WARNING: LUA NUMBERS ARE FLOATS, THIS MEANS THAT FOR NUMBERS GREATER THAN 16,777,216 ROUNDING INACCURACIES WILL OCCUR
+TraversePointerChain = 10000 --args <starting base>, <value type>, <bitOffset/pointer offset1>, <pointer offsets...>
 GAME_BASE = 0
 CHR_INS_BASE = 1
+TARGET_CHR_INS_BASE = 2
+UNSIGNED_BYTE = 0
+SIGNED_BYTE = 1
+UNSIGNED_SHORT = 2
+SIGNED_SHORT = 3
+UNSIGNED_INT = 4
+SIGNED_INT = 5
+FLOAT = 6
+BIT = 7
 
 --Print to this mod's console
 --Use ExposePrint func
@@ -14,183 +25,10 @@ ExposeDebugPrint = 10001 --args <string>
 --Get event flag
 GetEventFlag = 10003 --args <flagId>
 
-------------------------------------------
---Custom Acts from Scripts-Data-Exposer
-------------------------------------------
---Writes a value at the specified location
---WARNING: OFFSETS THAT LEAD TO AN INVALID (BUT NOT NULL/0) POINTER WILL CRASH
-WritePointerChain = 10000 --args <starting base>, <value type>, <value>, <offset1>, <offset2>, ...
-UNSIGNED_BYTE = 0
-SIGNED_BYTE = 1
-UNSIGNED_SHORT = 2
-SIGNED_SHORT = 3
-UNSIGNED_INT = 4
-SIGNED_INT = 5
-FLOAT = 6
-
---Updates the player's magic module's id to the equipped magic slot, allowing the proper usage of magic with irregular methods.
---See UpdateMagicIndexFully()
-UpdateMagicIdToActive = 10002
-
---Set event flag
-SetEventFlag = 10003 --args <flagId>, <value>
-
-
-------------------------------------------
---Example functions utilizing the added acts/envs
-------------------------------------------
-local CHR_MODULES = 0x190
-local DATA_MODULE = 0x0
-local FP_MAX = 0x14C
-function GetFpMax()
-    return env(TraversePointerChain, CHR_INS_BASE, CHR_MODULES, DATA_MODULE, FP_MAX)
-end
-
-function GetFpRate()
-    return env(GetFp) / GetFpMax()
-end
-
-function ExposePrint(v)
-    act(ExposeDebugPrint, tostring(v))
-end
-
---Helper functions used because env always returns an int, TraversePointerChain returns 1.0f in its int representation 0x3f800000
---Not very sophisticated, doesn't take into account NaN/Infs
-local factorsBy2 = {}
-local divisionsBy2 = {}
-for i = -127, 127 do
-    factorsBy2[i] = math.pow(2, i)
-    divisionsBy2[i] = math.pow(2, -i)
-end
-
-bit = {}
-
-function bit.rightShift(v, count)
-    return math.floor(v * divisionsBy2[count])
-end
-
-function bit.leftShift(v, count)
-    return math.floor(v * factorsBy2[count])
-end
-
---Does this fully work?
-function bit.bAnd(v, mask)
-    local res = 0
-    for i = 1, 31 do
-        if mask % 2 == 1 then
-            res = res + factorsBy2[i - 1] * (v % 2)
-        end
-        v = bit.rightShift(v, 1)
-        mask = bit.rightShift(mask, 1)
-    end
-    return res
-end
-
-function IntBitsToFloat(val)
-    if val == 0 then return 0 end
-
-    local sign = bit.rightShift(val, 31)
-    if sign ~= 0 then
-        val = val + 0x80000000
-    end
-    local expo = bit.rightShift(val, 23) - 127
-    local mantissa = bit.bAnd(val, 0x007fffff)
-    local result = 0
-    for i = 0, 22 do
-        if bit.rightShift(mantissa, i) % 2 == 1 then
-            result = result + divisionsBy2[23 - i]
-        end
-    end
-    result = (1 * factorsBy2[expo]) * (1 + result)
-
-    if sign ~= 0 then
-        result = -result
-    end
-    return result
-end
-
-local PHYSICS_MODULE = 0x68
-local POS = 0x70
-function GetPosition()
-    local x = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, CHR_MODULES, PHYSICS_MODULE, POS + 0))
-    local y = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, CHR_MODULES, PHYSICS_MODULE, POS + 4))
-    local z = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, CHR_MODULES, PHYSICS_MODULE, POS + 8))
-    return {x = x, y = y, z = z}
-end
-
-local WORLD_CHR_MAN = 0x3CDCDD8
-local LOCAL_PLAYER = 0x1E508
-function GetLocalPlayerPosition()
-    local x = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 0))
-    local y = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 4))
-    local z = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 8))
-    return {x = x, y = y, z = z}
-end
-
-function GetDistanceFromLocalPlayer()
-    local playerPos = GetLocalPlayerPosition()
-    local pos = GetPosition()
-
-    local diffX = playerPos.x - pos.x
-    local diffY = playerPos.y - pos.y
-    local diffZ = playerPos.z - pos.z
-
-    return math.sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
-end
-
-function SetFp(fp)
-    act(WritePointerChain, CHR_INS_BASE, SIGNED_INT, fp, 0x190, 0x0, 0x148)
-end
-
-local CHR_FLAGS_1 = 0x530
-function SetChrDebugNoHit(noHit)
-    local chrFlags = bit.bAnd(env(TraversePointerChain, CHR_INS_BASE, CHR_FLAGS_1), 0xFF)
-    if noHit == TRUE and bit.rightShift(3) % 2 == 0 then
-        chrFlags = chrFlags + 8
-    elseif noHit == FALSE and bit.rightShift(3) % 2 == 1 then
-        chrFlags = chrFlags - 8
-    end
-    act(WritePointerChain, CHR_INS_BASE, UNSIGNED_BYTE, chrFlags, 0x530)
-end
-
-function IsPlayer()
-    if env(TraversePointerChain, CHR_INS_BASE, 0x64) == 0 then
-        return TRUE
-    end
-    return FALSE
-end
-
-local CHR_ENTRY_LIST_START = 0x1F1D0
-local CHR_ENTRY_LIST_END = 0x1F1D8
-local SUPERARMOR_MODULE = 0x40
-local POISE = 0x10
-local UNK_FOR_POISE_TIMER = 0x14
-function HalfEverythingsPoise()
-    local size = env(TraversePointerChain, GAME_BASE, WORLD_CHR_MAN, CHR_ENTRY_LIST_END) - env(TraversePointerChain, GAME_BASE, WORLD_CHR_MAN, CHR_ENTRY_LIST_START)
-    if size == 0 then return end
-    --i = 1 to skip yourself
-    for offset = 0x10, size, 0x10 do
-        local poise = env(TraversePointerChain, GAME_BASE, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, POISE)
-        poise = IntBitsToFloat(poise)
-        act(WritePointerChain, GAME_BASE, FLOAT, poise/2, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, POISE)
-        act(WritePointerChain, GAME_BASE, FLOAT, -1, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, UNK_FOR_POISE_TIMER)
-    end
-end
-
-function UpdateMagicIndexFully()
-    act(UpdateMagicIdToActive)
-    act(2026) --UpdateMagicIndexToMagicId
-end
-
-local CHR_CTRL = 0x58
-local CHR_MANIPULATOR = 0x18
-local AI = 0xC0
-local NPC_THINK_ID = 0x28
-function GetNpcThinkParamId()
-    return env(TraversePointerChain, CHR_INS_BASE, CHR_CTRL, CHR_MANIPULATOR, AI, NPC_THINK_ID)
-end
-
-
+--Get param value.
+--env only returns ints so floats will still need conversion in lua
+--bitOffset only used if value type is BIT
+GetParamValue = 10004 --args <param type>, <row>, <offset>, <value type>, <bitOffset/pointer offset1>, <pointer offsets...>
 PARAM_EquipParamWeapon = 0
 PARAM_EquipParamProtector = 1
 PARAM_EquipParamAccessory = 2
@@ -378,45 +216,198 @@ PARAM_SfxBlockResShareParam = 183
 PARAM_FinalDamageRateParam = 184
 PARAM_HitEffectSeParam = 185
 
-local SOLO_PARAM_REPOSITORY = 0x3CF8BC8
-local TO_PARAMS = 0x88
-local PARAMS_DISTANCE = 0x48
-local TO_PARAM_1 = 0x80
-local TO_PARAM_2 = 0x80
-local ROWS_COUNT = 0xA
-local ROW_ID = 0x40
-local ROW_OFFSET = 0x48
-local ROW_SIZE = 0x18
-function GetParamValue(param, row, offset)
-    local rowCount = bit.rightShift(env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROWS_COUNT - 2), 2)
-    for i = 0, rowCount - 1 do
-        local currId = env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROW_ID + ROW_SIZE * i)
-        if currId == row then
-            local rowOffset = env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROW_OFFSET + ROW_SIZE * i)
-            return env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, rowOffset + offset)
+------------------------------------------
+--Custom Acts from Scripts-Data-Exposer
+------------------------------------------
+--Writes a value at the specified location
+--4th param is bitOffset if value type is BIT, otherwise it's the first pointer offset.
+--WARNING: OFFSETS THAT LEAD TO AN INVALID (BUT NOT NULL/0) POINTER WILL CRASH
+WritePointerChain = 10000 --args <starting base>, <value type>, <value>, <bitOffset/pointer offset1>, <pointer offsets...>
+
+--Updates the player's magic module's id to the equipped magic slot, allowing the proper usage of magic with irregular methods.
+--See UpdateMagicIndexFully()
+UpdateMagicIdToActive = 10002
+
+--Set event flag
+SetEventFlag = 10003 --args <flagId>, <value>
+
+--Set param value.
+--bitOffset only used if value type is BIT
+SetParamValue = 10004 --args <param type>, <row>, <offset>, <value type>, <value>, <bitOffset>
+
+--Identical to ESD's ReplaceTool (function 59)
+ESD_ReplaceTool = 10159 --args <to replace>, <replace with>, <unk>
+
+------------------------------------------
+--Example functions utilizing the added acts/envs
+------------------------------------------
+local CHR_MODULES = 0x190
+local DATA_MODULE = 0x0
+local FP_MAX = 0x14C
+function GetFpMax()
+    return env(TraversePointerChain, CHR_INS_BASE, SIGNED_INT, CHR_MODULES, DATA_MODULE, FP_MAX)
+end
+
+function GetFpRate()
+    return env(GetFp) / GetFpMax()
+end
+
+function ExposePrint(v)
+    act(ExposeDebugPrint, tostring(v))
+end
+
+local BEHAVIOR_MODULE = 0x28
+local SPEED_MODIFIER = 0x17C8
+function SetTargetSpeedModifier(modifier)
+    act(WritePointerChain, TARGET_CHR_INS_BASE, FLOAT, modifier, CHR_MODULES, BEHAVIOR_MODULE, SPEED_MODIFIER)
+end
+
+--Helper functions used because env always returns an int, TraversePointerChain returns 1.0f in its int representation 0x3f800000
+--Not very sophisticated, doesn't take into account NaN/Infs
+local factorsBy2 = {}
+local divisionsBy2 = {}
+for i = -127, 127 do
+    factorsBy2[i] = math.pow(2, i)
+    divisionsBy2[i] = math.pow(2, -i)
+end
+
+bit = {}
+
+function bit.rightShift(v, count)
+    return math.floor(v * divisionsBy2[count])
+end
+
+function bit.leftShift(v, count)
+    return math.floor(v * factorsBy2[count])
+end
+
+--Does this fully work?
+function bit.bAnd(v, mask)
+    local res = 0
+    for i = 1, 31 do
+        if mask % 2 == 1 then
+            res = res + factorsBy2[i - 1] * (v % 2)
         end
+        v = bit.rightShift(v, 1)
+        mask = bit.rightShift(mask, 1)
+    end
+    return res
+end
+
+function IntBitsToFloat(val)
+    if val == 0 then return 0 end
+
+    local sign = bit.rightShift(val, 31)
+    if sign ~= 0 then
+        val = val + 0x80000000
+    end
+    local expo = bit.rightShift(val, 23) - 127
+    local mantissa = bit.bAnd(val, 0x007fffff)
+    local result = 0
+    for i = 0, 22 do
+        if bit.rightShift(mantissa, i) % 2 == 1 then
+            result = result + divisionsBy2[23 - i]
+        end
+    end
+    result = (1 * factorsBy2[expo]) * (1 + result)
+
+    if sign ~= 0 then
+        result = -result
+    end
+    return result
+end
+
+local PHYSICS_MODULE = 0x68
+local POS = 0x70
+function GetPosition()
+    local x = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 0))
+    local y = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 4))
+    local z = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 8))
+    return {x = x, y = y, z = z}
+end
+
+local WORLD_CHR_MAN = 0x3CDCDD8
+local LOCAL_PLAYER = 0x1E508
+function GetLocalPlayerPosition()
+    local x = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 0))
+    local y = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 4))
+    local z = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 8))
+    return {x = x, y = y, z = z}
+end
+
+function GetDistanceFromLocalPlayer()
+    local playerPos = GetLocalPlayerPosition()
+    local pos = GetPosition()
+
+    local diffX = playerPos.x - pos.x
+    local diffY = playerPos.y - pos.y
+    local diffZ = playerPos.z - pos.z
+
+    return math.sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ)
+end
+
+local FP = 0x148
+function SetFp(fp)
+    act(WritePointerChain, CHR_INS_BASE, SIGNED_INT, fp, CHR_MODULES, DATA_MODULE, FP)
+end
+
+local CHR_FLAGS_1 = 0x530
+local NO_HIT_BIT_OFFSET = 3
+function SetChrDebugNoHit(noHit)
+    if noHit ~= TRUE and noHit ~= FALSE then return end
+    act(WritePointerChain, CHR_INS_BASE, BIT, noHit, NO_HIT_BIT_OFFSET, CHR_FLAGS_1)
+end
+
+function IsPlayer()
+    if env(TraversePointerChain, CHR_INS_BASE, SIGNED_INT, 0x64) == 0 then
+        return TRUE
+    end
+    return FALSE
+end
+
+local SUPERARMOR_MODULE = 0x40
+local POISE = 0x10
+local UNK_FOR_POISE_TIMER = 0x14
+function HalfEverythingsPoise()
+    local size = env(TraversePointerChain, GAME_BASE, UNSIGNED_INT, WORLD_CHR_MAN, CHR_ENTRY_LIST_END) - env(TraversePointerChain, GAME_BASE, UNSIGNED_INT, WORLD_CHR_MAN, CHR_ENTRY_LIST_START)
+    if size == 0 then return end
+    --i = 1 to skip yourself
+    for offset = 0x10, size, 0x10 do
+        local poise = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, POISE)
+        poise = IntBitsToFloat(poise)
+        act(WritePointerChain, GAME_BASE, FLOAT, poise/2, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, POISE)
+        act(WritePointerChain, GAME_BASE, FLOAT, -1, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, UNK_FOR_POISE_TIMER)
     end
 end
 
-function SetParamValue(param, row, offset, type, value)
-    local rowCount = bit.rightShift(env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROWS_COUNT - 2), 2)
-    for i = 0, rowCount - 1 do
-        local currId = env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROW_ID + ROW_SIZE * i)
-        if currId == row then
-            local rowOffset = env(TraversePointerChain, GAME_BASE, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, ROW_OFFSET + ROW_SIZE * i)
-            act(WritePointerChain, GAME_BASE, type, value, SOLO_PARAM_REPOSITORY, TO_PARAMS + PARAMS_DISTANCE * param, TO_PARAM_1, TO_PARAM_2, rowOffset + offset)
-        end
-    end
+function UpdateMagicIndexFully()
+    act(UpdateMagicIdToActive)
+    act(2026) --UpdateMagicIndexToMagicId
 end
 
+local CHR_CTRL = 0x58
+local CHR_MANIPULATOR = 0x18
+local AI = 0xC0
+local NPC_THINK_ID = 0x28
+function GetNpcThinkParamId()
+    return env(TraversePointerChain, CHR_INS_BASE, SIGNED_INT, CHR_CTRL, CHR_MANIPULATOR, AI, NPC_THINK_ID)
+end
+
+local CANNOT_MOVE_ANIM_OFFSET
 function GetCannotMoveAnim()
     local think = GetNpcThinkParamId()
     if think == INVALID or think == 0 then return INVALID end
-    return GetParamValue(PARAM_NpcThinkParam, think, 0x24)
+    return env(GetParamValue, PARAM_NpcThinkParam, think, CANNOT_MOVE_ANIM_OFFSET, SIGNED_INT)
 end
 
 function SetCannotMoveAnim(anim)
     local think = GetNpcThinkParamId()
     if think == INVALID or think == 0 then return end
-    SetParamValue(PARAM_NpcThinkParam, think, 0x24, SIGNED_INT, anim)
+    act(SetParamValue, PARAM_NpcThinkParam, think, CANNOT_MOVE_ANIM_OFFSET, SIGNED_INT, anim)
+end
+
+local IS_CONSUMED_BYTE = 0x48
+local IS_CONSUMED_BIT_OFFSET = 7
+function SetItemNotConsumed(goodsId)
+    act(SetParamValue, PARAM_EquipParamGoods, goodsId, IS_CONSUMED_BYTE, BIT, 0, IS_CONSUMED_BIT_OFFSET)
 end
