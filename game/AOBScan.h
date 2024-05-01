@@ -181,7 +181,7 @@ extern void ScanAndAssignAddresses()
     hks_luaL_checklstring = (char* (*)(HksState*, int, int*))AOBScanCode(hks_luaL_checklstringAOB, -89);
     getEventFlag = (bool (*)(void*, unsigned int))AOBScanCode(getEventFlagAOB, -4);
     setEventFlag = (void (*)(void*, unsigned int, int))AOBScanCode(setEventFlagAOB, -9);
-    replaceItem = (char (*)(int, int, char))AOBScanCode(replaceItemAOB, 0);
+    replaceItem = (char (*)(void*, int, int, char))AOBScanCode(replaceItemAOB, 0);
     getParamResCap = (void* (*)(void*, int, int))AOBScanCode(getParamResCapAOB, -8);
     getChrInsFromHandle = (void* (*)(void*, uint64_t*))AOBScanCode(getChrInsFromHandleAOB, 0);
 }

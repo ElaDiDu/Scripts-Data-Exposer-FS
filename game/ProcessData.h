@@ -54,7 +54,7 @@ inline void* getParamData(int paramIndex)
 
 void* (*getChrInsFromHandle)(void* worldChrMan, uint64_t* handlePtr);
 
-char (*replaceItem)(int itemToReplace, int newItem, char unk3);
+char (*replaceItem)(void* equipGameData, int itemToReplace, int newItem, char unk3);
 
 
 //HKS

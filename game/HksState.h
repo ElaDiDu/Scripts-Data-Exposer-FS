@@ -378,7 +378,12 @@ static void newActFunc(void** chrInsPtr, int actId, HksState* hksState)
         int replaceWith = hks_luaL_checkint(hksState, 3);
         char unkChar = hksHasParamInt(hksState, 4) ? hks_luaL_checkint(hksState, 4) : 1;
 
-        replaceItem(toReplace, replaceWith, unkChar);
+        intptr_t chrIns = (intptr_t)*chrInsPtr;
+        intptr_t gameData = ((intptr_t (*)(intptr_t))(*(intptr_t*)(*(intptr_t*)chrIns + 0x168)))(chrIns);
+        if (gameData == NULL) return;
+        //gameData->equipData
+
+        replaceItem((void*)(gameData + 0x2b0), toReplace, replaceWith, unkChar);
     }
     }
 }
