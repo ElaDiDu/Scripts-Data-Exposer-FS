@@ -17,7 +17,7 @@
 #pragma comment(lib, "libMinHook-x86-v141-md.lib")
 #endif
 
-#define OPEN_CONSOLE_ON_START 1
+#define OPEN_CONSOLE_ON_START 0
 
 
 static void initAddresses()

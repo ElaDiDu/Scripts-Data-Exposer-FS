@@ -109,9 +109,9 @@ void* getParamRowEntry(int paramIndex, int rowId)
     return NULL;
 }
 
-int getValueFromAddress(intptr_t address, ValueInAddressType valueType, char bitOffset = 0) 
+int getValueFromAddress(intptr_t address, ValueInAddressType valueType, char bitOffset = 0)
 {
-    switch (valueType) 
+    switch (valueType)
     {
     case UNSIGNED_BYTE_ADDR:
         return *(unsigned char*)address;
@@ -131,6 +131,8 @@ int getValueFromAddress(intptr_t address, ValueInAddressType valueType, char bit
     case BIT_ADDR:
         return ((*(unsigned char*)address) & SINGLE_BIT_MASKS[bitOffset]) != 0;
     }
+
+    return *(int*)address;
 }
 
 void setValueFromAddress(intptr_t address, ValueInAddressType valueType, float value, char bitOffset = 0)
@@ -379,6 +381,8 @@ static void newActFunc(void** chrInsPtr, int actId, HksState* hksState)
         char unkChar = hksHasParamInt(hksState, 4) ? hks_luaL_checkint(hksState, 4) : 1;
 
         intptr_t chrIns = (intptr_t)*chrInsPtr;
+        if (!isPlayerIns((void*)chrIns)) return;
+
         intptr_t gameData = ((intptr_t (*)(intptr_t))(*(intptr_t*)(*(intptr_t*)chrIns + 0x168)))(chrIns);
         if (gameData == NULL) return;
         //gameData->equipData

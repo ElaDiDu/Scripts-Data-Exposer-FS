@@ -355,7 +355,7 @@ local CHR_FLAGS_1 = 0x530
 local NO_HIT_BIT_OFFSET = 3
 function SetChrDebugNoHit(noHit)
     if noHit ~= TRUE and noHit ~= FALSE then return end
-    act(WritePointerChain, CHR_INS_BASE, BIT, noHit, NO_HIT_BIT_OFFSET, CHR_FLAGS_1)
+        act(WritePointerChain, CHR_INS_BASE, BIT, noHit, NO_HIT_BIT_OFFSET, CHR_FLAGS_1)
 end
 
 function IsPlayer()
@@ -410,4 +410,11 @@ local IS_CONSUMED_BYTE = 0x48
 local IS_CONSUMED_BIT_OFFSET = 7
 function SetItemNotConsumed(goodsId)
     act(SetParamValue, PARAM_EquipParamGoods, goodsId, IS_CONSUMED_BYTE, BIT, 0, IS_CONSUMED_BIT_OFFSET)
+end
+
+local FULL_PHYSICK = 250
+local EMPTY_PHYSICK = 251
+function RefillPhysick()
+    act(ESD_ReplaceTool, FULL_PHYSICK, FULL_PHYSICK)
+    act(ESD_ReplaceTool, EMPTY_PHYSICK, FULL_PHYSICK)
 end
