@@ -365,6 +365,8 @@ function IsPlayer()
     return FALSE
 end
 
+local CHR_ENTRY_LIST_START = 0x1F1D0
+local CHR_ENTRY_LIST_END = 0x1F1D8
 local SUPERARMOR_MODULE = 0x40
 local POISE = 0x10
 local UNK_FOR_POISE_TIMER = 0x14
@@ -393,7 +395,7 @@ function GetNpcThinkParamId()
     return env(TraversePointerChain, CHR_INS_BASE, SIGNED_INT, CHR_CTRL, CHR_MANIPULATOR, AI, NPC_THINK_ID)
 end
 
-local CANNOT_MOVE_ANIM_OFFSET
+local CANNOT_MOVE_ANIM_OFFSET = 0x24
 function GetCannotMoveAnim()
     local think = GetNpcThinkParamId()
     if think == INVALID or think == 0 then return INVALID end
