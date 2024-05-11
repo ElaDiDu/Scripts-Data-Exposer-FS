@@ -367,6 +367,8 @@ function RefillPhysick()
     act(ESD_ReplaceTool, EMPTY_PHYSICK, FULL_PHYSICK)
 end
 
+--This function does not spawn a character by itself, it only sets data and tells the debug chr creator to spawn when it can.
+--This means that you can only create 1 chr per frame using this.
 local WORLD_CHR_MAN = 0x3CDCDD8
 local DEBUG_CHR_CREATOR = 0x1E640
 local IS_SPAWN = 0x44
