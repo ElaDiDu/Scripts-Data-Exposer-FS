@@ -16,6 +16,8 @@ enum ValueInAddressType
 
 typedef void HksState;
 
+enum LuaType { LUA_TNONE = -1, LUA_TNIL = 0, LUA_TBOOLEAN = 1, LUA_TLIGHTUSERDATA = 2, LUA_TNUMBER = 3, LUA_TSTRING = 4, LUA_TTABLE = 5, LUA_TFUNCTION = 6, LUA_TUSERDATA = 7, LUA_TTHREAD = 8 };
+
 //from thefithmatt
 struct EventInsId 
 {
@@ -57,4 +59,23 @@ struct CSEmkEventIns
 	EventInsId* eventInsId;
 	uint8_t* argData;
 	uint8_t unkE0[0xD0];
+};
+
+typedef wchar_t ModelName[5];
+
+struct ChrSpawnDbgProperties 
+{
+	wchar_t model[6];
+	bool isPlayer = false;
+
+	int npcParam = 0;
+	int npcThinkParam = 0;
+	int eventEntityId = 0;
+	int talkId = 0;
+	float posX = 0;
+	float posY = 0;
+	float posZ = 0;
+
+	int charaInitParam = 0;
+	int manipulatorType = 5;
 };

@@ -1,10 +1,13 @@
 ------------------------------------------
 --Custom Envs from Scripts-Data-Exposer
 ------------------------------------------
---Returns the int at the specified location
+--WARNING: LUA NUMBERS ARE FLOATS, THIS MEANS THAT FOR NUMBERS GREATER THAN 16,777,216 ROUNDING INACCURACIES WILL OCCUR.
+--YOU CAN BYPASS THIS BY USING THE STRING REPRESENTATION OF THE NUMBER WHEN NEEDED.
+
+
+--Returns the value at the specified location
 --4th param is bitOffset if value type is BIT, otherwise it's the first pointer offset.
 --WARNING: OFFSETS THAT LEAD TO AN INVALID (BUT NOT NULL/0) POINTER WILL CRASH
---WARNING: LUA NUMBERS ARE FLOATS, THIS MEANS THAT FOR NUMBERS GREATER THAN 16,777,216 ROUNDING INACCURACIES WILL OCCUR
 TraversePointerChain = 10000 --args <starting base>, <value type>, <bitOffset/pointer offset1>, <pointer offsets...>
 GAME_BASE = 0
 CHR_INS_BASE = 1
@@ -26,7 +29,6 @@ ExposeDebugPrint = 10001 --args <string>
 GetEventFlag = 10003 --args <flagId>
 
 --Get param value.
---env only returns ints so floats will still need conversion in lua
 --bitOffset only used if value type is BIT
 GetParamValue = 10004 --args <param type>, <row>, <offset>, <value type>, <bitOffset/pointer offset1>, <pointer offsets...>
 PARAM_EquipParamWeapon = 0
@@ -236,7 +238,7 @@ SetEventFlag = 10003 --args <flagId>, <value>
 SetParamValue = 10004 --args <param type>, <row>, <offset>, <value type>, <value>, <bitOffset>
 
 --Identical to ESD's ReplaceTool (function 59)
-ESD_ReplaceTool = 10159 --args <to replace>, <replace with>, <unk>
+ESD_ReplaceTool = 100059 --args <to replace>, <replace with>, <unk = 1>
 
 ------------------------------------------
 --Example functions utilizing the added acts/envs
@@ -262,76 +264,21 @@ function SetTargetSpeedModifier(modifier)
     act(WritePointerChain, TARGET_CHR_INS_BASE, FLOAT, modifier, CHR_MODULES, BEHAVIOR_MODULE, SPEED_MODIFIER)
 end
 
---Helper functions used because env always returns an int, TraversePointerChain returns 1.0f in its int representation 0x3f800000
---Not very sophisticated, doesn't take into account NaN/Infs
-local factorsBy2 = {}
-local divisionsBy2 = {}
-for i = -127, 127 do
-    factorsBy2[i] = math.pow(2, i)
-    divisionsBy2[i] = math.pow(2, -i)
-end
-
-bit = {}
-
-function bit.rightShift(v, count)
-    return math.floor(v * divisionsBy2[count])
-end
-
-function bit.leftShift(v, count)
-    return math.floor(v * factorsBy2[count])
-end
-
---Does this fully work?
-function bit.bAnd(v, mask)
-    local res = 0
-    for i = 1, 31 do
-        if mask % 2 == 1 then
-            res = res + factorsBy2[i - 1] * (v % 2)
-        end
-        v = bit.rightShift(v, 1)
-        mask = bit.rightShift(mask, 1)
-    end
-    return res
-end
-
-function IntBitsToFloat(val)
-    if val == 0 then return 0 end
-
-    local sign = bit.rightShift(val, 31)
-    if sign ~= 0 then
-        val = val + 0x80000000
-    end
-    local expo = bit.rightShift(val, 23) - 127
-    local mantissa = bit.bAnd(val, 0x007fffff)
-    local result = 0
-    for i = 0, 22 do
-        if bit.rightShift(mantissa, i) % 2 == 1 then
-            result = result + divisionsBy2[23 - i]
-        end
-    end
-    result = (1 * factorsBy2[expo]) * (1 + result)
-
-    if sign ~= 0 then
-        result = -result
-    end
-    return result
-end
-
 local PHYSICS_MODULE = 0x68
 local POS = 0x70
 function GetPosition()
-    local x = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 0))
-    local y = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 4))
-    local z = IntBitsToFloat(env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 8))
+    local x = env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 0)
+    local y = env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 4)
+    local z = env(TraversePointerChain, CHR_INS_BASE, FLOAT, CHR_MODULES, PHYSICS_MODULE, POS + 8)
     return {x = x, y = y, z = z}
 end
 
 local WORLD_CHR_MAN = 0x3CDCDD8
 local LOCAL_PLAYER = 0x1E508
 function GetLocalPlayerPosition()
-    local x = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 0))
-    local y = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 4))
-    local z = IntBitsToFloat(env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 8))
+    local x = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 0)
+    local y = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 4)
+    local z = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 8)
     return {x = x, y = y, z = z}
 end
 
@@ -376,7 +323,6 @@ function HalfEverythingsPoise()
     --i = 1 to skip yourself
     for offset = 0x10, size, 0x10 do
         local poise = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, POISE)
-        poise = IntBitsToFloat(poise)
         act(WritePointerChain, GAME_BASE, FLOAT, poise/2, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, POISE)
         act(WritePointerChain, GAME_BASE, FLOAT, -1, WORLD_CHR_MAN, CHR_ENTRY_LIST_START, offset, CHR_MODULES, SUPERARMOR_MODULE, UNK_FOR_POISE_TIMER)
     end
@@ -419,4 +365,49 @@ local EMPTY_PHYSICK = 251
 function RefillPhysick()
     act(ESD_ReplaceTool, FULL_PHYSICK, FULL_PHYSICK)
     act(ESD_ReplaceTool, EMPTY_PHYSICK, FULL_PHYSICK)
+end
+
+local WORLD_CHR_MAN = 0x3CDCDD8
+local DEBUG_CHR_CREATOR = 0x1E640
+local IS_SPAWN = 0x44
+local MODEL = 0x100
+local CHR_NPC_PARAM = 0xF0
+local CHR_NPC_THINK_PARAM = 0xF4
+local CHR_EVENT_ENTITY_ID = 0xF8
+local CHR_TALK_ID = 0xFC
+local CHR_POS = 0xB0
+local IS_PLAYER = 0X178
+local CHR_CHARA_INIT_PARAM = 0x17C
+function SetDebugChrSpawnData(spawnThisFrame, chrId, npcParamId, npcThinkParamId, eventEntityId, talkId, posX, posY, posZ, isPlayer, charaInitParam)
+    if chrId <= 0 or chrId > 9999 then
+        return
+    end
+
+    --Translate chrId to wide string in the form of "c0000" or "c4700"
+    act(WritePointerChain, GAME_BASE, UNSIGNED_SHORT, 0x63, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, MODEL) -- first char is 'c'
+    for i = 4, 1, -1 do
+        local digit = chrId % 10
+        act(WritePointerChain, GAME_BASE, UNSIGNED_SHORT, 0x30 + digit, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, MODEL + i * 2)
+        chrId = math.floor(chrId / 10)
+    end
+
+    act(WritePointerChain, GAME_BASE, SIGNED_INT, npcParamId, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_NPC_PARAM)
+    act(WritePointerChain, GAME_BASE, SIGNED_INT, npcThinkParamId, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_NPC_THINK_PARAM)
+    act(WritePointerChain, GAME_BASE, SIGNED_INT, eventEntityId, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_EVENT_ENTITY_ID)
+    act(WritePointerChain, GAME_BASE, SIGNED_INT, talkId, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_TALK_ID)
+    act(WritePointerChain, GAME_BASE, FLOAT, posX, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_POS + 0)
+    act(WritePointerChain, GAME_BASE, FLOAT, posY, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_POS + 4)
+    act(WritePointerChain, GAME_BASE, FLOAT, posZ, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_POS + 8)
+
+    act(WritePointerChain, GAME_BASE, SIGNED_BYTE, isPlayer, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, IS_PLAYER)
+    act(WritePointerChain, GAME_BASE, SIGNED_INT, charaInitParam, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, CHR_CHARA_INIT_PARAM)
+
+    if spawnThisFrame == TRUE then
+        act(WritePointerChain, GAME_BASE, SIGNED_BYTE, 1, WORLD_CHR_MAN, DEBUG_CHR_CREATOR, IS_SPAWN)
+    end
+end
+
+function SpawnRadahnOnChr()
+    local pos = GetPosition()
+    SetDebugChrSpawnData(TRUE, 4730, "47300000", "47300000", 0, 0, pos.x, pos.y + 1, pos.z, FALSE, 0)
 end

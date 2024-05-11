@@ -2,61 +2,73 @@
 #include <string>
 #include "ProcessData.h"
 #include "../include/Logger.h"
+#include "../include/PointerChain.h"
 
-enum EnvId 
+enum EnvId
 {
     TRAVERSE_POINTER_CHAIN = 10000,
-    EXECUTE_FUNCTION = 10002, 
+    EXECUTE_FUNCTION = 10002,
     GET_EVENT_FLAG = 10003,
     GET_PARAM = 10004,
 };
-enum ActId 
-{ 
-    WRITE_POINTER_CHAIN = 10000, 
-    DEBUG_PRINT = 10001, 
-    UPDATE_MAGICID = 10002, 
+enum ActId
+{
+    WRITE_POINTER_CHAIN = 10000,
+    DEBUG_PRINT = 10001,
+    UPDATE_MAGICID = 10002,
     SET_EVENT_FLAG = 10003,
     SET_PARAM = 10004,
+    CHR_SPAWN_DEBUG = 10005,
 
     //ESD
-    REPLACE_TOOL = 10159,
+    REPLACE_TOOL = 100059,
 
 };
+
+//TODO Change all ugly pointer traversals with PointerChain
 
 
 //hks functions return invalid when something is wrong, so we'll do the same with our custom funcs
 constexpr int INVALID = -1;
 
-enum LuaType {LUA_TNONE = -1, LUA_TNIL = 0, LUA_TBOOLEAN = 1, LUA_TLIGHTUSERDATA = 2, LUA_TNUMBER = 3, LUA_TSTRING = 4, LUA_TTABLE = 5, LUA_TFUNCTION = 6, LUA_TUSERDATA = 7, LUA_TTHREAD = 8};
-static int SINGLE_BIT_MASKS[] = {1, 2, 4, 8, 16, 32, 64, 128};
-
-/*
-* Gets the function to be executed's nth param as a string.
-*/
-char* hksGetParamString(HksState* hksState, int paramIndex)
-{
-    return hks_luaL_checklstring(hksState, paramIndex, NULL);
-}
-
-std::string hksParamToString(HksState* hksState, int paramIndex)
-{
-    int vtype = hks_lua_type(hksState, paramIndex);
-    if (vtype == LUA_TSTRING)
-        return hksGetParamString(hksState, paramIndex);
-    if (vtype == LUA_TNUMBER)
-        return std::to_string(hks_luaL_checknumber(hksState, paramIndex)).data();
-    if (vtype == LUA_TNONE || vtype == LUA_TNIL)
-        return "nil";
-
-    return "Object Type " + vtype;
-}
-
-
+static int SINGLE_BIT_MASKS[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 
 
 /*
 * Helper functions
 */
+
+
+
+
+/*
+* Convert model id to name
+* Examples:
+* 0 = c0000
+* 420 = c0420
+* 4700 = c4700
+*/
+#define MODEL_LENGTH (5)
+inline wchar_t digitToWChar(char digit)
+{
+    return digit + 0x30;
+}
+
+inline bool modelIdToName(int id, wchar_t* name)
+{
+    if (id < 0 || id > 9999) return false;
+
+    name[0] = L'c';
+
+    for (int i = 1; i < MODEL_LENGTH; i++)
+    {
+        char digit = id % 10;
+        name[MODEL_LENGTH - i] = digitToWChar(digit);
+        id = id / 10;
+    }
+
+    return true;
+}
 
 inline bool isPlayerIns(void* chrIns)
 {
@@ -76,7 +88,7 @@ inline intptr_t getBaseFromType(PointerBaseType baseType, void* hksState, void* 
         return getProcessBase();
     if (baseType == CHR_INS)
         return (intptr_t)chrIns;
-    if (baseType == TARGET_CHR_INS) 
+    if (baseType == TARGET_CHR_INS)
     {
         if (isPlayerIns(chrIns))
         {
@@ -109,59 +121,58 @@ void* getParamRowEntry(int paramIndex, int rowId)
     return NULL;
 }
 
-int getValueFromAddress(intptr_t address, ValueInAddressType valueType, char bitOffset = 0)
+float getValueFromAddress(intptr_t address, int valueType, char bitOffset = 0)
 {
     switch (valueType)
     {
     case UNSIGNED_BYTE_ADDR:
-        return *(unsigned char*)address;
+        return (float)*(unsigned char*)address;
     case SIGNED_BYTE_ADDR:
-        return *(char*)address;
+        return (float)*(char*)address;
     case UNSIGNED_SHORT_ADDR:
-        return *(unsigned short*)address;
+        return (float)*(unsigned short*)address;
     case SIGNED_SHORT_ADDR:
-        return *(short*)address;
+        return (float)*(short*)address;
     case UNSIGNED_INT_ADDR:
-        return *(unsigned int*)address;
+        return (float)*(unsigned int*)address;
     case SIGNED_INT_ADDR:
-        return *(int*)address;
+        return (float)*(int*)address;
     case FLOAT_ADDR:
-        //return the float as int represntation (1.0f = 0x3f800000) because env only returns ints
-        return *(unsigned int*)address;
+        return (float)*(float*)address;
     case BIT_ADDR:
-        return ((*(unsigned char*)address) & SINGLE_BIT_MASKS[bitOffset]) != 0;
+        return (float)(((*(unsigned char*)address) & SINGLE_BIT_MASKS[bitOffset]) != 0);
     }
 
-    return *(int*)address;
+    return (float)*(int*)address;
 }
 
-void setValueFromAddress(intptr_t address, ValueInAddressType valueType, float value, char bitOffset = 0)
+void setValueFromAddress(intptr_t address, int valueType, int iValue, float fValue, char bitOffset = 0)
 {
     switch (valueType)
     {
     case UNSIGNED_BYTE_ADDR:
-        *(unsigned char*)address = (unsigned char)value;
+        *(unsigned char*)address = (unsigned char)iValue;
         return;
     case SIGNED_BYTE_ADDR:
-        *(char*)address = (char)value;
+        *(char*)address = (char)iValue;
         return;
     case UNSIGNED_SHORT_ADDR:
-        *(unsigned short*)address = (unsigned short)value;
+        *(unsigned short*)address = (unsigned short)iValue;
         return;
     case SIGNED_SHORT_ADDR:
-        *(short*)address = (short)value;
+        *(short*)address = (short)iValue;
         return;
     case UNSIGNED_INT_ADDR:
-        *(unsigned int*)address = (unsigned int)value;
+        *(unsigned int*)address = (unsigned int)iValue;
         return;
     case SIGNED_INT_ADDR:
-        *(int*)address = (int)value;
+        *(int*)address = iValue;
         return;
     case FLOAT_ADDR:
-        *(float*)address = (float)value;
+        *(float*)address = fValue;
         return;
     case BIT_ADDR:
-        if ((char)value == 0) 
+        if ((char)iValue == 0)
             *(uint8_t*)(address) = *(uint8_t*)(address) & ~SINGLE_BIT_MASKS[bitOffset];
         else
             *(uint8_t*)(address) = *(uint8_t*)(address) | SINGLE_BIT_MASKS[bitOffset];
@@ -171,78 +182,88 @@ void setValueFromAddress(intptr_t address, ValueInAddressType valueType, float v
 
 //New hook functions
 
-int newEnvFunc(void** chrInsPtr, int envId, HksState* hksState)
+
+/// <summary>
+/// Function for new envs
+/// </summary>
+/// <param name="chrInsPtr"></param>
+/// <param name="envId"></param>
+/// <param name="hksState"></param>
+/// <returns></returns>
+float newEnvFunc(void** chrInsPtr, int envId, HksState* hksState)
 {
-    switch (envId) 
+    switch (envId)
     {
     case TRAVERSE_POINTER_CHAIN:
     {
         //pointerBaseType, valueType, bitOffset/pointerOffset1, pointerOffsets...)
-        if (!hksHasParamInt(hksState, 2) || !hksHasParamInt(hksState, 3) || !hksHasParamInt(hksState, 4))
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3) || !hksHasParamNumber(hksState, 4))
             return INVALID;
-        intptr_t address = getBaseFromType((PointerBaseType)hks_luaL_checkint(hksState, 2), hksState, *chrInsPtr);
+        intptr_t address = getBaseFromType((PointerBaseType)hksGetParamInt(hksState, 2), hksState, *chrInsPtr);
         if (address == 0)
             return INVALID;
 
-        int valueType = hks_luaL_checkint(hksState, 3);
+        int valueType = hksGetParamInt(hksState, 3);
         int paramIndex = 4;
         int bitOffset = 0;
 
-        if (valueType == BIT_ADDR) 
+        if (valueType == BIT_ADDR)
         {
-            if (!hksHasParamInt(hksState, 5))
+            if (!hksHasParamNumber(hksState, 5))
                 return INVALID;
 
             paramIndex = 5;
-            bitOffset = hks_luaL_checkint(hksState, 4);
+            bitOffset = hksGetParamInt(hksState, 4);
         }
         else
             paramIndex = 4;
 
-        while (hksHasParamInt(hksState, paramIndex + 1))
+        while (hksHasParamNumber(hksState, paramIndex + 1))
         {
             if (address == 0)
                 return INVALID;
 
-            int offset = hks_luaL_checkint(hksState, paramIndex);
+            intptr_t offset = hksGetParamLong(hksState, paramIndex);
+    
+
             address = *(intptr_t*)(address + offset);
             paramIndex++;
         }
-        address = address + hks_luaL_checkint(hksState, paramIndex);
+        address = address + hksGetParamLong(hksState, paramIndex);
 
-        return getValueFromAddress(address, (ValueInAddressType)valueType, bitOffset);
+        return getValueFromAddress(address, valueType, bitOffset);
     }
     case GET_EVENT_FLAG:
     {
         //flagId
-        if (!hksHasParamInt(hksState, 2))
+        if (!hksHasParamNumber(hksState, 2))
             return INVALID;
 
-        return getEventFlag(*VirtualMemoryFlag, hks_luaL_checkint(hksState, 2));
+        return getEventFlag(*VirtualMemoryFlag, hksGetParamInt(hksState, 2));
     }
-    case GET_PARAM: 
+    case GET_PARAM:
     {
         //paramIndex, row, offset, valueType, <optional> bitOffset
-        if (!hksHasParamInt(hksState, 2) || !hksHasParamInt(hksState, 3) || !hksHasParamInt(hksState, 4) || !hksHasParamInt(hksState, 5))
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3) || !hksHasParamNumber(hksState, 4) || !hksHasParamNumber(hksState, 5))
             return INVALID;
 
-        void* rowEntry = getParamRowEntry(hks_luaL_checkint(hksState, 2), hks_luaL_checkint(hksState, 3));
+        void* rowEntry = getParamRowEntry(hksGetParamInt(hksState, 2), hksGetParamInt(hksState, 3));
         if (rowEntry == NULL)
             return INVALID;
-        intptr_t valAddr = (intptr_t)rowEntry + hks_luaL_checkint(hksState, 4);
+        intptr_t valAddr = (intptr_t)rowEntry + hksGetParamInt(hksState, 4);
 
 
-        int valType = hks_luaL_checkint(hksState, 5);
+        int valType = hksGetParamInt(hksState, 5);
         int bitOffset = 0;
 
         if (valType == BIT_ADDR)
         {
-            if (!hksHasParamInt(hksState, 6)) return INVALID;
-            bitOffset = hks_luaL_checkint(hksState, 6);
+            if (!hksHasParamNumber(hksState, 6)) return INVALID;
+            bitOffset = hksGetParamInt(hksState, 6);
             if (bitOffset > 7) return INVALID;
         }
 
-        return getValueFromAddress(valAddr, (ValueInAddressType)valType, bitOffset);
+        return getValueFromAddress(valAddr, valType, bitOffset);
     }
 
     }
@@ -250,150 +271,256 @@ int newEnvFunc(void** chrInsPtr, int envId, HksState* hksState)
     return 0;
 }
 
-static int envHookFunc(void** chrInsPtr, int envId, HksState* hksState)
+/// <summary>
+/// Function for new acts
+/// </summary>
+/// <param name="chrInsPtr"></param>
+/// <param name="actId"></param>
+/// <param name="hksState"></param>
+/// <returns></returns>
+static float newActFunc(void** chrInsPtr, int actId, HksState* hksState)
 {
-    int newRes = newEnvFunc(chrInsPtr, envId, hksState);
-    int originalRes = hksEnv(chrInsPtr, envId, hksState);
-
-    //if original env returns 0 either the envId wasn't vanilla so take the new env, or it was vanilla and just returned 0, at which case newRes would be 0 too anyways.
-    if (originalRes != 0)
-        return originalRes;
-    return newRes;
-}
-
-static void newActFunc(void** chrInsPtr, int actId, HksState* hksState) 
-{
-    switch (actId) 
+    switch (actId)
     {
     case WRITE_POINTER_CHAIN:
     {
         //base, valueType, value, bitOffset/pointerOffset1, pointerOffsets...
-        if (!hksHasParamInt(hksState, 2) || !hksHasParamInt(hksState, 3) || !hksHasParamInt(hksState, 4) || !hksHasParamInt(hksState, 5))
-            return;
-        intptr_t address = getBaseFromType((PointerBaseType)hks_luaL_checkint(hksState, 2), hksState, *chrInsPtr);
-        int valType = hks_luaL_checkint(hksState, 3);
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3) || !hksHasParamNumber(hksState, 4) || !hksHasParamNumber(hksState, 5))
+            return 0;
+        intptr_t address = getBaseFromType((PointerBaseType)hksGetParamInt(hksState, 2), hksState, *chrInsPtr);
+        int valType = hksGetParamInt(hksState, 3);
         int paramIndex = 4;
         int bitOffset = 0;
 
         if (valType == BIT_ADDR)
         {
-            if (!hksHasParamInt(hksState, 6))
-                return;
+            if (!hksHasParamNumber(hksState, 6))
+                return 0;
 
             paramIndex = 6;
-            bitOffset = hks_luaL_checkint(hksState, 5);
+            bitOffset = hksGetParamInt(hksState, 5);
         }
         else
             paramIndex = 5;
 
-        while (hksHasParamInt(hksState, paramIndex + 1))
+        while (hksHasParamNumber(hksState, paramIndex + 1))
         {
             if (address == 0)
-                return;
+                return 0;
 
-            int offset = hks_luaL_checkint(hksState, paramIndex);
+            intptr_t offset = hksGetParamLong(hksState, paramIndex);
             address = *(intptr_t*)(address + offset);
             paramIndex++;
         }
         if (address == 0)
-            return;
-        address = address + hks_luaL_checkint(hksState, paramIndex);
+            return 0;
+        address = address + hksGetParamLong(hksState, paramIndex);
 
-        setValueFromAddress(address, (ValueInAddressType)valType, hks_luaL_checknumber(hksState, 4), bitOffset);
-        
+        setValueFromAddress(address, valType, hksGetParamInt(hksState, 4), hks_luaL_checknumber(hksState, 4), bitOffset);
+
         break;
     }
 
     case DEBUG_PRINT:
     {
-        //str
-        if (hks_lua_type(hksState, 2) != LUA_TSTRING)
-            return;
-        if (GetConsoleWindow() == NULL) 
+        if (GetConsoleWindow() == NULL)
         {
             AllocConsole();
             freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
             Logger::log("Created Scripts-Data-Exposer-FS Console");
         }
-        Logger::log("[HKS Exposer Debug]: " + hksParamToString(hksState, 2));
+        Logger::log("[HKS Exposer]: " + hksParamToString(hksState, 2));
         break;
     }
 
     case UPDATE_MAGICID:
     {
-        intptr_t chrIns = (intptr_t)*chrInsPtr;
-        void* (*getPlayerGameData)(intptr_t) = (void* (*)(intptr_t))(*(intptr_t*)(*(intptr_t*)chrIns + 0x168));
+        void* chrIns = *chrInsPtr;
+        void* (*getPlayerGameData)(void*) = *PointerChain::make<void* (*)(void*)>(chrIns, 0x0, 0x168);
         void* playerGameData = getPlayerGameData(chrIns);
         if (playerGameData == NULL)
-            return;
-        void* equipData = *(void**)((intptr_t)playerGameData + 0x518);
+            return 0;
+        void* equipData = *PointerChain::make<void*>(playerGameData, 0x518);
         if (equipData == NULL)
-            return;
-        int activeSlot = *(int*)((intptr_t)equipData + 0x80);
+            return 0;
+        int activeSlot = *PointerChain::make<int>(equipData, 0x80);;
         int magicId = *(int*)((intptr_t)equipData + activeSlot * 8 + 0x10);
-        intptr_t* magicModule = *(intptr_t**)((*(intptr_t*)(chrIns + 0x190)) + 0x60);
-        ((void(*)(intptr_t*, int))(*(intptr_t*)(*magicModule + 0x20)))(magicModule, magicId);
+        void* magicModule = *PointerChain::make<void*>(chrIns, 0x190, 0x60);
+        void (*updateMagicId)(void*, int) = *PointerChain::make<void (*)(void*, int)>(magicModule, 0x0, 0x20);
+
+        updateMagicId(magicModule, magicId);
         break;
     }
 
     case SET_EVENT_FLAG:
     {
         //flagId, flagValue
-        if (!hksHasParamInt(hksState, 2) || !hksHasParamInt(hksState, 3))
-            return;
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3))
+            return 0;
 
-        setEventFlag(*VirtualMemoryFlag, hks_luaL_checkint(hksState, 2), hks_luaL_checkint(hksState, 3) != 0);
+        setEventFlag(*VirtualMemoryFlag, hksGetParamInt(hksState, 2), hksGetParamInt(hksState, 3) != 0);
         break;
     }
     case SET_PARAM:
     {
         //paramIndex, row, offset, valueType, value, <optional> bitOffset
-        if (!hksHasParamInt(hksState, 2) || !hksHasParamInt(hksState, 3) || !hksHasParamInt(hksState, 4) || !hksHasParamInt(hksState, 5) || !hksHasParamInt(hksState, 6))
-            return;
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3) || !hksHasParamNumber(hksState, 4) || !hksHasParamNumber(hksState, 5) || !hksHasParamNumber(hksState, 6))
+            return 0;
 
-        void* rowEntry = getParamRowEntry(hks_luaL_checkint(hksState, 2), hks_luaL_checkint(hksState, 3));
-        if (rowEntry == NULL) 
-            return;
+        void* rowEntry = getParamRowEntry(hksGetParamInt(hksState, 2), hksGetParamInt(hksState, 3));
+        if (rowEntry == NULL)
+            return 0;
 
-        intptr_t addrToSet = (intptr_t)rowEntry + hks_luaL_checkint(hksState, 4);
-        int valType = hks_luaL_checkint(hksState, 5);
+        intptr_t addrToSet = (intptr_t)rowEntry + hksGetParamInt(hksState, 4);
+        int valType = hksGetParamInt(hksState, 5);
         int bitOffset = 0;
 
-        if (valType == BIT_ADDR) 
+        if (valType == BIT_ADDR)
         {
-            if (!hksHasParamInt(hksState, 7)) return;
-            int bitOffset = hks_luaL_checkint(hksState, 7);
-            if (bitOffset > 7) return;
+            if (!hksHasParamNumber(hksState, 7)) return 0;
+            int bitOffset = hksGetParamInt(hksState, 7);
+            if (bitOffset > 7) return 0;
         }
 
-        setValueFromAddress(addrToSet, (ValueInAddressType)valType, hks_luaL_checknumber(hksState, 6), bitOffset);
+        setValueFromAddress(addrToSet, valType, hksGetParamInt(hksState, 6), hks_luaL_checknumber(hksState, 6), bitOffset);
 
+        break;
+    }
+    //TODO Use function instead of just writing to memory so you can make multiple chrs at once. Unfinished for now.
+    case CHR_SPAWN_DEBUG:
+    {
+        //model, npcParam, npcThinkParam, posX, posY, posZ, eventEntityId, talkId, charaInitParam
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3) || !hksHasParamNumber(hksState, 4) || !hksHasParamNumber(hksState, 5) || !hksHasParamNumber(hksState, 6) || !hksHasParamNumber(hksState, 7))
+            return 0;
+
+        ChrSpawnDbgProperties chrProperties;
+
+        int chrId = hksGetParamInt(hksState, 2);
+        wchar_t model[6] = { 0 };
+        if (!modelIdToName(chrId, model)) //invalid id
+            return 0;
+        if (chrId == 0)
+            chrProperties.isPlayer = true;
+        memcpy_s(chrProperties.model, 10, model, 10);
+
+        chrProperties.npcParam = hksGetParamInt(hksState, 3);
+        chrProperties.npcThinkParam = hksGetParamInt(hksState, 4);
+
+        chrProperties.posX = hks_luaL_checknumber(hksState, 5);
+        chrProperties.posY = hks_luaL_checknumber(hksState, 6);
+        chrProperties.posZ = hks_luaL_checknumber(hksState, 7);
+
+        if (hksHasParamNumber(hksState, 8))
+            chrProperties.eventEntityId = hksGetParamInt(hksState, 8);
+        else
+            chrProperties.eventEntityId = 0;
+
+        if (hksHasParamNumber(hksState, 9))
+            chrProperties.talkId = hksGetParamInt(hksState, 9);
+        else
+            chrProperties.talkId = 0;
+
+        if (hksHasParamNumber(hksState, 10))
+            chrProperties.charaInitParam = hksGetParamInt(hksState, 10);
+        else
+            chrProperties.charaInitParam = 0;
+
+        createChrDebug(chrProperties);
         break;
     }
 
     //ESD Functions
     case REPLACE_TOOL:
     {
-        if (!hksHasParamInt(hksState, 2) || !hksHasParamInt(hksState, 3))
-            return;
-        int toReplace = hks_luaL_checkint(hksState, 2);
-        int replaceWith = hks_luaL_checkint(hksState, 3);
-        char unkChar = hksHasParamInt(hksState, 4) ? hks_luaL_checkint(hksState, 4) : 1;
+        if (!hksHasParamNumber(hksState, 2) || !hksHasParamNumber(hksState, 3))
+            return 0;
+        int toReplace = hksGetParamInt(hksState, 2);
+        int replaceWith = hksGetParamInt(hksState, 3);
+        char unkChar = hksHasParamNumber(hksState, 4) ? hksGetParamInt(hksState, 4) : 1;
 
         intptr_t chrIns = (intptr_t)*chrInsPtr;
-        if (!isPlayerIns((void*)chrIns)) return;
+        if (!isPlayerIns((void*)chrIns)) return 0;
 
-        intptr_t gameData = ((intptr_t (*)(intptr_t))(*(intptr_t*)(*(intptr_t*)chrIns + 0x168)))(chrIns);
-        if (gameData == NULL) return;
+        intptr_t gameData = ((intptr_t(*)(intptr_t))(*(intptr_t*)(*(intptr_t*)chrIns + 0x168)))(chrIns);
+        if (gameData == NULL) return 0;
         //gameData->equipData
 
         replaceItem((void*)(gameData + 0x2b0), toReplace, replaceWith, unkChar);
     }
     }
+
+    return 0;
 }
 
-static void actHookFunc(void** chrInsPtr, int actId, HksState* hksState)
+/// <summary>
+/// The actual lua env cfunction pushed onto the lua state.
+/// </summary>
+/// <param name="hksState"></param>
+/// <returns>number of values returned</returns>
+static int LuaHks_env(HksState* hksState)
 {
-    newActFunc(chrInsPtr, actId, hksState);
-    hksAct(chrInsPtr, actId, hksState);
+    void* chrIns = getHksChrInsOwner(hksState);
+    if (chrIns == NULL || !hksHasParamNumber(hksState, 1))
+    {
+        //ChrIns should never be null, there should always be envId (1st argument)
+        hks_lua_pushnumber(hksState, 0);
+        return 1;
+    }
+
+    //chrIns->chrModules->behaviorScript->chrEnvRunsOn
+    //always self?
+    void** envTarget = *PointerChain::make<void**>(chrIns, 0x190, 0x10, 0x18);
+    int envId = hks_luaL_checkint(hksState, 1);
+
+    //The function acceptable "envId" are mutually exclusive. The one not used must return 0, so their sum would be the result of the used function
+    float result = hksEnv(envTarget, envId, hksState) + newEnvFunc(envTarget, envId, hksState);
+    hks_lua_pushnumber(hksState, result);
+
+    return 1;
+}
+
+/// <summary>
+/// The actual lua act cfunction pushed onto the lua state.
+/// </summary>
+/// <param name="hksState"></param>
+/// <returns>number of values returned</returns>
+static int LuaHks_act(HksState* hksState)
+{
+    void* chrIns = getHksChrInsOwner(hksState);
+    if (chrIns == NULL || !hksHasParamNumber(hksState, 1))
+    {
+        //ChrIns should never be null, there should always be actId (1st argument)
+        hks_lua_pushnumber(hksState, 0);
+        return 1;
+    }
+
+    //chrIns->chrModules->behaviorScript->chrActRunsOn
+    //always self?
+    void** actTarget = *PointerChain::make<void**>(chrIns, 0x190, 0x10, 0x10);
+    int actId = hks_luaL_checkint(hksState, 1);
+
+    //The original act function does seemingly intentionally return numbers, ours doesn't (use new env instead if you can).
+
+    float result = newActFunc(actTarget, actId, hksState);
+    if (result == 0)
+        result = (float)hksAct(actTarget, actId, hksState);
+    else
+        hksAct(actTarget, actId, hksState);
+
+    hks_lua_pushnumber(hksState, result);
+
+    return 1;
+}
+
+
+static void newPushEnvActGlobalsFunc(HksState* hksState)
+{
+    hks_addnamedcclosure(hksState, "env", LuaHks_env);
+    hks_addnamedcclosure(hksState, "act", LuaHks_act);
+}
+
+static void hksSetCGlobalsHookFunc(HksState* hksState)
+{
+    hksSetCGlobals(hksState);
+    newPushEnvActGlobalsFunc(hksState);
 }
