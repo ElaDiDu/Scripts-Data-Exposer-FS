@@ -27,6 +27,8 @@
 static inline void printAddresses() 
 {
     Logger::debug("---");
+    Logger::debug("Game: %p", getProcessBase());
+    Logger::debug("---");
     Logger::debug("Addresses:");
     for (auto const& [name, address] : registeredAddresses) 
     {

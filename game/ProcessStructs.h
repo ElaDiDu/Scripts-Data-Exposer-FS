@@ -79,3 +79,9 @@ struct ChrSpawnDbgProperties
 	int charaInitParam = 0;
 	int manipulatorType = 5;
 };
+
+struct EventFlagCaller 
+{
+	char callerType = 1;
+	void* caller = nullptr;
+};

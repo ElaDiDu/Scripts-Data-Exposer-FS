@@ -39,10 +39,26 @@ void** WorldChrMan;
 
 //functions
 
-//misc
-bool (*getEventFlag)(void* virtualMemoryFlag, unsigned int flagId);
+static const char* CALLER_NAME = "ExposerEventCaller";
 
-void (*setEventFlag)(void* virtualMemoryFlag, unsigned int flagId, int val);
+//misc
+bool (*getEventFlagPtr)(void* virtualMemoryFlag, unsigned int* flagId, EventFlagCaller* caller);
+
+bool getEventFlag(void* virtualMemoryFlag, unsigned int flagId) 
+{
+    EventFlagCaller caller;
+    caller.caller = (void*)CALLER_NAME;
+    return getEventFlagPtr(virtualMemoryFlag, &flagId, &caller);
+}
+
+void (*setEventFlagPtr)(void* virtualMemoryFlag, unsigned int* flagId, bool val, EventFlagCaller* caller, bool unk_5);
+
+void setEventFlag(void* virtualMemoryFlag, unsigned int flagId, int val) 
+{
+    EventFlagCaller caller;
+    caller.caller = (void*)CALLER_NAME;
+    setEventFlagPtr(virtualMemoryFlag, &flagId, val != 0, &caller, true);
+}
 
 void* (*getParamResCap)(void* soloParamRepository, int paramIndex, int unk);
 

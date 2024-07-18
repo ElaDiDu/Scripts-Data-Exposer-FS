@@ -152,8 +152,10 @@ extern void ScanAndAssignAddresses()
     const char* hks_luaL_checkintAOB = "8b d6 48 8b cf e8 ?? ?? ?? ?? 8b c3 48 8b 5c 24 40 48 8b 74 24 48 48 83 c4 30 5f c3";
     const char* hks_luaL_checknumberAOB = "8b d7 48 8b cb e8 ?? ?? ?? ?? 0f 28 f0 0f 57 c9 0f 2e f1 75 ?? 8b d7 48 8b cb";
     const char* hks_luaL_checklstringAOB = "4c 8b c3 8b d6 48 8b cf e8 ?? ?? ?? ?? 48 8b d8 48 85 c0 75";
-    const char* getEventFlagAOB = "44 8b da 33 d2 41 8b c3 41 f7 f0 4c 8b d1 45 33 c9 44 0f af c0 45 2b d8";
-    const char* setEventFlagAOB = "44 8b d2 33 d2 41 8b c2 41 f7 f1 41 8b d8 4c 8b d9";
+    //const char* getEventFlagAOB = "?? 8b da 33 d2 41 8b c3 41 f7 f0 4c 8b d1 45 33 c9 44 0f af c0 45 2b d8";
+    //const char* setEventFlagAOB = "44 8b d2 33 d2 41 8b c2 41 f7 f1 41 8b d8 4c 8b d9";
+    const char* getEventFlagPtrAOB = "48 83 ec 28 8b 12 85 d2 74 ?? e8";
+    const char* setEventFlagPtrAOB = "48 89 5c 24 08 48 89 74 24 18 57 48 83 ec 30 48 8b da 41 0f b6 f8 8b 12 48 8b f1 85 d2 74 ?? 45 84 c0";
     const char* replaceItemAOB = "40 57 48 83 ec 40 48 c7 44 24 30 fe ff ff ff 48 89 5c 24 60 48 89 74 24 68 41 0f b6 f1 41 8b d8 48 8b f9 81 e2 ff ff ff 0f";
     const char* getParamResCapAOB = "48 63 d2 48 8d 04 d2 44 3b 84 c1 80 00 00 00";
     const char* getChrInsFromHandleAOB = "48 83 ec 28 e8 ?? ?? ?? ?? 48 85 c0 74 ?? 48 8b 00 48 83 c4 28 c3 48 83 c4 28 c3";
@@ -191,8 +193,10 @@ extern void ScanAndAssignAddresses()
     RegisterAddress("hks_luaL_checkint", (void**)&hks_luaL_checkint, AOBScanCode(hks_luaL_checkintAOB, -123));
     RegisterAddress("hks_luaL_checknumber", (void**)&hks_luaL_checknumber, AOBScanCode(hks_luaL_checknumberAOB, -86));
     RegisterAddress("hks_luaL_checklstring", (void**)&hks_luaL_checklstring, AOBScanCode(hks_luaL_checklstringAOB, -89));
-    RegisterAddress("getEventFlag", (void**)&getEventFlag, AOBScanCode(getEventFlagAOB, -4));
-    RegisterAddress("setEventFlag", (void**)&setEventFlag, AOBScanCode(setEventFlagAOB, -9));
+    //RegisterAddress("getEventFlag", (void**)&getEventFlag, AOBScanCode(getEventFlagAOB, -4));
+    //RegisterAddress("setEventFlag", (void**)&setEventFlag, AOBScanCode(setEventFlagAOB, -9));
+    RegisterAddress("getEventFlagPtr", (void**)&getEventFlagPtr, AOBScanCode(getEventFlagPtrAOB));
+    RegisterAddress("setEventFlagPtr", (void**)&setEventFlagPtr, AOBScanCode(setEventFlagPtrAOB));
     RegisterAddress("replaceItem", (void**)&replaceItem, AOBScanCode(replaceItemAOB));
     RegisterAddress("getParamResCap", (void**)&getParamResCap, AOBScanCode(getParamResCapAOB, -8));
     RegisterAddress("getChrInsFromHandle", (void**)&getChrInsFromHandle, AOBScanCode(getChrInsFromHandleAOB));

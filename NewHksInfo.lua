@@ -1,8 +1,9 @@
 ------------------------------------------
 --Custom Envs from Scripts-Data-Exposer
 ------------------------------------------
---WARNING: LUA NUMBERS ARE FLOATS, THIS MEANS THAT FOR NUMBERS GREATER THAN 16,777,216 ROUNDING INACCURACIES WILL OCCUR.
---YOU CAN BYPASS THIS BY USING THE STRING REPRESENTATION OF THE NUMBER WHEN NEEDED.
+--WARNING: Lua numbers are floats, this means that for numbers greater than 16,777,216 rounding inaccuracies will occur.
+--You can bypass this by using the string representation of the number when needed.
+--To quickly figure out if a number is accurate you can use https://www.h-schmidt.net/FloatConverter/IEEE754.html "Error due to conversion"
 
 
 --Returns the value at the specified location
@@ -412,4 +413,12 @@ end
 function SpawnRadahnOnChr()
     local pos = GetPosition()
     SetDebugChrSpawnData(TRUE, 4730, "47300000", "47300000", 0, 0, pos.x, pos.y + 1, pos.z, FALSE, 0)
+end
+
+
+------------------------------------------
+--Deprecated
+------------------------------------------
+function IntBitsToFloat(val)
+    return val
 end

@@ -146,7 +146,7 @@ float getValueFromAddress(intptr_t address, int valueType, char bitOffset = 0)
     return (float)*(int*)address;
 }
 
-void setValueFromAddress(intptr_t address, int valueType, int iValue, float fValue, char bitOffset = 0)
+void setValueInAddress(intptr_t address, int valueType, int iValue, float fValue, char bitOffset = 0)
 {
     switch (valueType)
     {
@@ -316,7 +316,7 @@ static float newActFunc(void** chrInsPtr, int actId, HksState* hksState)
             return 0;
         address = address + hksGetParamLong(hksState, paramIndex);
 
-        setValueFromAddress(address, valType, hksGetParamInt(hksState, 4), hks_luaL_checknumber(hksState, 4), bitOffset);
+        setValueInAddress(address, valType, hksGetParamInt(hksState, 4), hks_luaL_checknumber(hksState, 4), bitOffset);
 
         break;
     }
@@ -382,7 +382,7 @@ static float newActFunc(void** chrInsPtr, int actId, HksState* hksState)
             if (bitOffset > 7) return 0;
         }
 
-        setValueFromAddress(addrToSet, valType, hksGetParamInt(hksState, 6), hks_luaL_checknumber(hksState, 6), bitOffset);
+        setValueInAddress(addrToSet, valType, hksGetParamInt(hksState, 6), hks_luaL_checknumber(hksState, 6), bitOffset);
 
         break;
     }
