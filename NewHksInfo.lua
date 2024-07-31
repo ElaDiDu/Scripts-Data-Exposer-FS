@@ -274,7 +274,7 @@ function GetPosition()
     return {x = x, y = y, z = z}
 end
 
-local WORLD_CHR_MAN = 0x3CDCDD8
+local WORLD_CHR_MAN = 0x3D65FA8
 local LOCAL_PLAYER = 0x1E508
 function GetLocalPlayerPosition()
     local x = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 0)
@@ -303,7 +303,7 @@ local CHR_FLAGS_1 = 0x530
 local NO_HIT_BIT_OFFSET = 3
 function SetChrDebugNoHit(noHit)
     if noHit ~= TRUE and noHit ~= FALSE then return end
-        act(WritePointerChain, CHR_INS_BASE, BIT, noHit, NO_HIT_BIT_OFFSET, CHR_FLAGS_1)
+    act(WritePointerChain, CHR_INS_BASE, BIT, noHit, NO_HIT_BIT_OFFSET, CHR_FLAGS_1)
 end
 
 function IsPlayer()
@@ -313,8 +313,8 @@ function IsPlayer()
     return FALSE
 end
 
-local CHR_ENTRY_LIST_START = 0x1F1D0
-local CHR_ENTRY_LIST_END = 0x1F1D8
+local CHR_ENTRY_LIST_START = 0x1F1D8
+local CHR_ENTRY_LIST_END = 0x1F1E0
 local SUPERARMOR_MODULE = 0x40
 local POISE = 0x10
 local UNK_FOR_POISE_TIMER = 0x14
@@ -370,8 +370,9 @@ end
 
 --This function does not spawn a character by itself, it only sets data and tells the debug chr creator to spawn when it can.
 --This means that you can only create 1 chr per frame using this.
-local WORLD_CHR_MAN = 0x3CDCDD8
-local DEBUG_CHR_CREATOR = 0x1E640
+--Unrecommended
+local WORLD_CHR_MAN = 0x3D65FA8
+local DEBUG_CHR_CREATOR = 0x1E648
 local IS_SPAWN = 0x44
 local MODEL = 0x100
 local CHR_NPC_PARAM = 0xF0
