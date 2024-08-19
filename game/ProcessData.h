@@ -123,6 +123,8 @@ const char* (*hks_luaL_checklstring)(HksState* hksState, int idx, size_t* lenOut
 */
 void (*hks_lua_pushnumber)(HksState* hksState, float number);
 
+void (*hks_lua_pushlstring)(HksState* hksState, const char* str, size_t len);
+
 /*
 * Gets hkbCharacter (ptr) owner of the HKS script. This probably returns a pointer to a whole struct whose first element is hkbChr. hkbCharacter->28 is ChrIns
 */
@@ -299,6 +301,20 @@ inline double hksGetParamDouble(HksState* hksState, int paramIndex)
     hksGetParamDouble(hksState, paramIndex, result);
     return result;
 }
+
+void hksPushString(HksState* hksState, std::string str)
+{
+    hks_lua_pushlstring(hksState, str.c_str(), str.length());
+}
+
+
+inline void hksPushNil(HksState* hksState) 
+{
+    // I'm not making all lua hks structs
+    int* top = *PointerChain::make<int*>(hksState, 0x48);   // top = hksState->top
+    *top = LUA_TNIL;                                        // top->tt = LUA_TNIL
+    *PointerChain::make<intptr_t>(hksState, 0x48) = ((intptr_t)top) + 0x10;    // hksState->top = top + 1;
+};
 
 
 

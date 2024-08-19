@@ -164,6 +164,7 @@ extern void ScanAndAssignAddresses()
     const char* createHksStateAOB = "48 8b cb e8 ?? ?? ?? ?? 48 8b cb e8 ?? ?? ?? ?? 48 8b cb e8 ?? ?? ?? ?? 48 8b cb e8 ?? ?? ?? ?? 48 8b cb e8 ?? ?? ?? ?? 48 8b cb e8 ?? ?? ?? ?? 48 8b c3";
     const char* hks_addnamedcclosureAOB = "48 89 5c 24 08 57 48 83 ec 30 49 8b c0 c7 44 24 20 00 00 00 00 48 8b da 4c 8b ca 48 8b d0 45 33 c0 48 8b f9";
     const char* deleteChrAOB = "48 85 d2 0f 84 29 02 00 00 57 48 83 ec 30 48 c7 44 24 20 fe ff ff ff 48 89 5c 24 40 48 89 74";
+    const char* hks_lua_pushlstringAOB = "45 8d 88 65 72 6f 6b";
 
     //Globals
     //VirtualMemoryFlag = (void **)getAbsoluteAddress(process, 0x3cdf238);
@@ -206,5 +207,5 @@ extern void ScanAndAssignAddresses()
     replacedHksSetCGlobals = hksSetCGlobals;
     RegisterAddress("hks_addnamedcclosure", (void**)&hks_addnamedcclosure, AOBScanCode(hks_addnamedcclosureAOB));
     RegisterAddress("deleteChr", (void**)&deleteChr, AOBScanCode(deleteChrAOB));
-    
+    RegisterAddress("hks_lua_pushlstring", (void**)&hks_lua_pushlstring, AOBScanCode(hks_lua_pushlstringAOB, -25));
 }

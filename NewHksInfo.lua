@@ -5,6 +5,7 @@
 --You can bypass this by using the string representation of the number when needed.
 --To quickly figure out if a number is accurate you can use https://www.h-schmidt.net/FloatConverter/IEEE754.html "Error due to conversion"
 
+--If encountered an error the env/act will return nil, errorMessage
 
 --Returns the value at the specified location
 --4th param is bitOffset if value type is BIT, otherwise it's the first pointer offset.
