@@ -391,7 +391,7 @@ static const char* newActFunc(void** chrInsPtr, int actId, HksState* hksState)
         {
             if (!hksHasParamNumber(hksState, 7)) 
                 return INCORRECT_ARGS;
-            int bitOffset = hksGetParamInt(hksState, 7);
+            bitOffset = hksGetParamInt(hksState, 7);
             if (bitOffset > 7) 
                 return INCORRECT_ARGS;
         }
