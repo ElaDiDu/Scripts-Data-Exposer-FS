@@ -275,7 +275,7 @@ function GetPosition()
     return {x = x, y = y, z = z}
 end
 
-local WORLD_CHR_MAN = 0x3D65FA8
+local WORLD_CHR_MAN = 0x3D65F88
 local LOCAL_PLAYER = 0x1E508
 function GetLocalPlayerPosition()
     local x = env(TraversePointerChain, GAME_BASE, FLOAT, WORLD_CHR_MAN, LOCAL_PLAYER, CHR_MODULES, PHYSICS_MODULE, POS + 0)
@@ -372,7 +372,7 @@ end
 --This function does not spawn a character by itself, it only sets data and tells the debug chr creator to spawn when it can.
 --This means that you can only create 1 chr per frame using this.
 --Unrecommended
-local WORLD_CHR_MAN = 0x3D65FA8
+local WORLD_CHR_MAN = 0x3D65F88
 local DEBUG_CHR_CREATOR = 0x1E648
 local IS_SPAWN = 0x44
 local MODEL = 0x100
