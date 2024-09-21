@@ -352,7 +352,7 @@ static const char* newActFunc(void** chrInsPtr, int actId, HksState* hksState)
         void* playerGameData = getPlayerGameData(chrIns);
         if (playerGameData == NULL)
             return NULL_POINTER;
-        void* equipData = *PointerChain::make<void*>(playerGameData, 0x518);
+        void* equipData = *PointerChain::make<void*>(playerGameData, 0x530);
         if (equipData == NULL)
             return NULL_POINTER;
         int activeSlot = *PointerChain::make<int>(equipData, 0x80);;
