@@ -106,7 +106,7 @@ void* getParamRowEntry(int paramIndex, int rowId)
     intptr_t param = (intptr_t)getParamData(paramIndex);
     if (param == NULL) return NULL;
 
-    short rowCount = *(short*)(param + 0xA);
+    unsigned short rowCount = *(unsigned short*)(param + 0xA);
     for (int i = 0; i <= rowCount; i++)
     {
         int currId = *(int*)(param + 0x40 + 0x18 * i);
